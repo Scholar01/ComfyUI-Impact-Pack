@@ -1,6 +1,9 @@
 import os
 import sys
 
+from safetensors import torch
+import torch as pytorch
+
 import folder_paths
 import comfy.samplers
 import comfy.sd
@@ -30,12 +33,14 @@ warnings.filterwarnings('ignore', category=UserWarning, message='TypedStorage is
 
 model_path = folder_paths.models_dir
 
-
 # Nodes
 # folder_paths.supported_pt_extensions
-folder_paths.folder_names_and_paths["mmdets_bbox"] = ([os.path.join(model_path, "mmdets", "bbox")], folder_paths.supported_pt_extensions)
-folder_paths.folder_names_and_paths["mmdets_segm"] = ([os.path.join(model_path, "mmdets", "segm")], folder_paths.supported_pt_extensions)
-folder_paths.folder_names_and_paths["mmdets"] = ([os.path.join(model_path, "mmdets")], folder_paths.supported_pt_extensions)
+folder_paths.folder_names_and_paths["mmdets_bbox"] = (
+    [os.path.join(model_path, "mmdets", "bbox")], folder_paths.supported_pt_extensions)
+folder_paths.folder_names_and_paths["mmdets_segm"] = (
+    [os.path.join(model_path, "mmdets", "segm")], folder_paths.supported_pt_extensions)
+folder_paths.folder_names_and_paths["mmdets"] = (
+    [os.path.join(model_path, "mmdets")], folder_paths.supported_pt_extensions)
 folder_paths.folder_names_and_paths["sams"] = ([os.path.join(model_path, "sams")], folder_paths.supported_pt_extensions)
 folder_paths.folder_names_and_paths["onnx"] = ([os.path.join(model_path, "onnx")], {'.onnx'})
 
@@ -43,39 +48,40 @@ folder_paths.folder_names_and_paths["onnx"] = ([os.path.join(model_path, "onnx")
 class ONNXDetectorProvider:
     @classmethod
     def INPUT_TYPES(s):
-        return {"required": {"model_name": (folder_paths.get_filename_list("onnx"), )}}
+        return {"required": {"model_name": (folder_paths.get_filename_list("onnx"),)}}
 
-    RETURN_TYPES = ("BBOX_DETECTOR", )
+    RETURN_TYPES = ("BBOX_DETECTOR",)
     FUNCTION = "load_onnx"
 
     CATEGORY = "ImpactPack"
 
     def load_onnx(self, model_name):
         model = folder_paths.get_full_path("onnx", model_name)
-        return (core.ONNXDetector(model), )
+        return (core.ONNXDetector(model),)
 
 
 class CLIPSegDetectorProvider:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                        "text": ("STRING", {"multiline": False}),
-                        "blur": ("FLOAT", {"min": 0, "max": 15, "step": 0.1, "default": 7}),
-                        "threshold": ("FLOAT", {"min": 0, "max": 1, "step": 0.05, "default": 0.4}),
-                        "dilation_factor": ("INT", {"min": 0, "max": 10, "step": 1, "default": 4}),
-                    }
-                }
+            "text": ("STRING", {"multiline": False}),
+            "blur": ("FLOAT", {"min": 0, "max": 15, "step": 0.1, "default": 7}),
+            "threshold": ("FLOAT", {"min": 0, "max": 1, "step": 0.05, "default": 0.4}),
+            "dilation_factor": ("INT", {"min": 0, "max": 10, "step": 1, "default": 4}),
+        }
+        }
 
-    RETURN_TYPES = ("BBOX_DETECTOR", )
+    RETURN_TYPES = ("BBOX_DETECTOR",)
     FUNCTION = "doit"
 
     CATEGORY = "ImpactPack/Util"
 
     def doit(self, text, blur, threshold, dilation_factor):
         if "CLIPSeg" in nodes.NODE_CLASS_MAPPINGS:
-            return (core.BBoxDetectorBasedOnCLIPSeg(text, blur, threshold, dilation_factor), )
+            return (core.BBoxDetectorBasedOnCLIPSeg(text, blur, threshold, dilation_factor),)
         else:
-            print("[ERROR] CLIPSegToBboxDetector: CLIPSeg custom node isn't installed. You must install biegert/ComfyUI-CLIPSeg extension to use this node.")
+            print(
+                "[ERROR] CLIPSegToBboxDetector: CLIPSeg custom node isn't installed. You must install biegert/ComfyUI-CLIPSeg extension to use this node.")
 
 
 class SAMLoader:
@@ -83,12 +89,12 @@ class SAMLoader:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "model_name": (folder_paths.get_filename_list("sams"), ),
+                "model_name": (folder_paths.get_filename_list("sams"),),
                 "device_mode": (["AUTO", "Prefer GPU", "CPU"],),
             }
         }
 
-    RETURN_TYPES = ("SAM_MODEL", )
+    RETURN_TYPES = ("SAM_MODEL",)
     FUNCTION = "load_model"
 
     CATEGORY = "ImpactPack"
@@ -113,23 +119,23 @@ class SAMLoader:
         sam.is_auto_mode = device_mode == "AUTO"
 
         print(f"Loads SAM model: {modelname} (device:{device_mode})")
-        return (sam, )
+        return (sam,)
 
 
 class ONNXDetectorForEach:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                    "onnx_detector": ("ONNX_DETECTOR",),
-                    "image": ("IMAGE",),
-                    "threshold": ("FLOAT", {"default": 0.8, "min": 0.0, "max": 1.0, "step": 0.01}),
-                    "dilation": ("INT", {"default": 10, "min": -512, "max": 512, "step": 1}),
-                    "crop_factor": ("FLOAT", {"default": 1.0, "min": 0.5, "max": 100, "step": 0.1}),
-                    "drop_size": ("INT", {"min": 1, "max": MAX_RESOLUTION, "step": 1, "default": 10}),
-                    }
-                }
+            "onnx_detector": ("ONNX_DETECTOR",),
+            "image": ("IMAGE",),
+            "threshold": ("FLOAT", {"default": 0.8, "min": 0.0, "max": 1.0, "step": 0.01}),
+            "dilation": ("INT", {"default": 10, "min": -512, "max": 512, "step": 1}),
+            "crop_factor": ("FLOAT", {"default": 1.0, "min": 0.5, "max": 100, "step": 0.1}),
+            "drop_size": ("INT", {"min": 1, "max": MAX_RESOLUTION, "step": 1, "default": 10}),
+        }
+        }
 
-    RETURN_TYPES = ("SEGS", )
+    RETURN_TYPES = ("SEGS",)
     FUNCTION = "doit"
 
     CATEGORY = "ImpactPack/Detector"
@@ -138,46 +144,49 @@ class ONNXDetectorForEach:
 
     def doit(self, onnx_detector, image, threshold, dilation, crop_factor, drop_size):
         segs = onnx_detector.detect(image, threshold, dilation, crop_factor, drop_size)
-        return (segs, )
+        return (segs,)
 
 
 class DetailerForEach:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                     "image": ("IMAGE", ),
-                     "segs": ("SEGS", ),
-                     "model": ("MODEL",),
-                     "clip": ("CLIP",),
-                     "vae": ("VAE",),
-                     "guide_size": ("FLOAT", {"default": 256, "min": 64, "max": nodes.MAX_RESOLUTION, "step": 8}),
-                     "guide_size_for": ("BOOLEAN", {"default": True, "label_on": "bbox", "label_off": "crop_region"}),
-                     "max_size": ("FLOAT", {"default": 768, "min": 64, "max": nodes.MAX_RESOLUTION, "step": 8}),
-                     "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
-                     "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
-                     "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
-                     "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
-                     "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
-                     "positive": ("CONDITIONING",),
-                     "negative": ("CONDITIONING",),
-                     "denoise": ("FLOAT", {"default": 0.5, "min": 0.0001, "max": 1.0, "step": 0.01}),
-                     "feather": ("INT", {"default": 5, "min": 0, "max": 100, "step": 1}),
-                     "noise_mask": ("BOOLEAN", {"default": True, "label_on": "enabled", "label_off": "disabled"}),
-                     "force_inpaint": ("BOOLEAN", {"default": True, "label_on": "enabled", "label_off": "disabled"}),
-                     "wildcard": ("STRING", {"multiline": True, "dynamicPrompts": False}),
-                     },
-                "optional": {"detailer_hook": ("DETAILER_HOOK",), }
-                }
+            "image": ("IMAGE",),
+            "segs": ("SEGS",),
+            "model": ("MODEL",),
+            "clip": ("CLIP",),
+            "vae": ("VAE",),
+            "guide_size": ("FLOAT", {"default": 256, "min": 64, "max": nodes.MAX_RESOLUTION, "step": 8}),
+            "guide_size_for": ("BOOLEAN", {"default": True, "label_on": "bbox", "label_off": "crop_region"}),
+            "max_size": ("FLOAT", {"default": 768, "min": 64, "max": nodes.MAX_RESOLUTION, "step": 8}),
+            "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
+            "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
+            "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
+            "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
+            "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
+            "positive": ("CONDITIONING",),
+            "negative": ("CONDITIONING",),
+            "denoise": ("FLOAT", {"default": 0.5, "min": 0.0001, "max": 1.0, "step": 0.01}),
+            "feather": ("INT", {"default": 5, "min": 0, "max": 100, "step": 1}),
+            "noise_mask": ("BOOLEAN", {"default": True, "label_on": "enabled", "label_off": "disabled"}),
+            "force_inpaint": ("BOOLEAN", {"default": True, "label_on": "enabled", "label_off": "disabled"}),
+            "wildcard": ("STRING", {"multiline": True, "dynamicPrompts": False}),
+        },
+            "optional": {"detailer_hook": ("DETAILER_HOOK",), }
+        }
 
-    RETURN_TYPES = ("IMAGE", )
+    RETURN_TYPES = ("IMAGE",)
     FUNCTION = "doit"
 
     CATEGORY = "ImpactPack/Detailer"
 
     @staticmethod
-    def do_detail(image, segs, model, clip, vae, guide_size, guide_size_for_bbox, max_size, seed, steps, cfg, sampler_name, scheduler,
-                  positive, negative, denoise, feather, noise_mask, force_inpaint, wildcard_opt=None, detailer_hook=None,
-                  refiner_ratio=None, refiner_model=None, refiner_clip=None, refiner_positive=None, refiner_negative=None):
+    def do_detail(image, segs, model, clip, vae, guide_size, guide_size_for_bbox, max_size, seed, steps, cfg,
+                  sampler_name, scheduler,
+                  positive, negative, denoise, feather, noise_mask, force_inpaint, wildcard_opt=None,
+                  detailer_hook=None,
+                  refiner_ratio=None, refiner_model=None, refiner_clip=None, refiner_positive=None,
+                  refiner_negative=None):
 
         image_pil = tensor2pil(image).convert('RGBA')
 
@@ -190,7 +199,7 @@ class DetailerForEach:
 
         for seg in segs[1]:
             cropped_image = seg.cropped_image if seg.cropped_image is not None \
-                                              else crop_ndarray4(image.numpy(), seg.crop_region)
+                else crop_ndarray4(image.numpy(), seg.crop_region)
 
             mask_pil = feather_mask(seg.cropped_mask, feather)
 
@@ -204,12 +213,15 @@ class DetailerForEach:
             else:
                 cropped_mask = None
 
-            enhanced_pil, cnet_pil = core.enhance_detail(cropped_image, model, clip, vae, guide_size, guide_size_for_bbox, max_size,
+            enhanced_pil, cnet_pil = core.enhance_detail(cropped_image, model, clip, vae, guide_size,
+                                                         guide_size_for_bbox, max_size,
                                                          seg.bbox, seed, steps, cfg, sampler_name, scheduler,
-                                                         positive, negative, denoise, cropped_mask, force_inpaint, wildcard_opt, detailer_hook,
+                                                         positive, negative, denoise, cropped_mask, force_inpaint,
+                                                         wildcard_opt, detailer_hook,
                                                          refiner_ratio=refiner_ratio, refiner_model=refiner_model,
                                                          refiner_clip=refiner_clip, refiner_positive=refiner_positive,
-                                                         refiner_negative=refiner_negative, control_net_wrapper=seg.control_net_wrapper)
+                                                         refiner_negative=refiner_negative,
+                                                         control_net_wrapper=seg.control_net_wrapper)
 
             if cnet_pil is not None:
                 cnet_pil_list.append(cnet_pil)
@@ -248,36 +260,36 @@ class DetailerForEach:
                                       cfg, sampler_name, scheduler, positive, negative, denoise, feather, noise_mask,
                                       force_inpaint, wildcard, detailer_hook)
 
-        return (enhanced_img, )
+        return (enhanced_img,)
 
 
 class DetailerForEachPipe:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                     "image": ("IMAGE", ),
-                     "segs": ("SEGS", ),
-                     "guide_size": ("FLOAT", {"default": 256, "min": 64, "max": nodes.MAX_RESOLUTION, "step": 8}),
-                     "guide_size_for": ("BOOLEAN", {"default": True, "label_on": "bbox", "label_off": "crop_region"}),
-                     "max_size": ("FLOAT", {"default": 768, "min": 64, "max": nodes.MAX_RESOLUTION, "step": 8}),
-                     "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
-                     "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
-                     "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
-                     "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
-                     "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
-                     "denoise": ("FLOAT", {"default": 0.5, "min": 0.0001, "max": 1.0, "step": 0.01}),
-                     "feather": ("INT", {"default": 5, "min": 0, "max": 100, "step": 1}),
-                     "noise_mask": ("BOOLEAN", {"default": True, "label_on": "enabled", "label_off": "disabled"}),
-                     "force_inpaint": ("BOOLEAN", {"default": True, "label_on": "enabled", "label_off": "disabled"}),
-                     "basic_pipe": ("BASIC_PIPE", ),
-                     "wildcard": ("STRING", {"multiline": True, "dynamicPrompts": False}),
-                     "refiner_ratio": ("FLOAT", {"default": 0.2, "min": 0.0, "max": 1.0}),
-                     },
-                "optional": {
-                    "detailer_hook": ("DETAILER_HOOK",),
-                    "refiner_basic_pipe_opt": ("BASIC_PIPE",),
-                    }
-                }
+            "image": ("IMAGE",),
+            "segs": ("SEGS",),
+            "guide_size": ("FLOAT", {"default": 256, "min": 64, "max": nodes.MAX_RESOLUTION, "step": 8}),
+            "guide_size_for": ("BOOLEAN", {"default": True, "label_on": "bbox", "label_off": "crop_region"}),
+            "max_size": ("FLOAT", {"default": 768, "min": 64, "max": nodes.MAX_RESOLUTION, "step": 8}),
+            "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
+            "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
+            "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
+            "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
+            "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
+            "denoise": ("FLOAT", {"default": 0.5, "min": 0.0001, "max": 1.0, "step": 0.01}),
+            "feather": ("INT", {"default": 5, "min": 0, "max": 100, "step": 1}),
+            "noise_mask": ("BOOLEAN", {"default": True, "label_on": "enabled", "label_off": "disabled"}),
+            "force_inpaint": ("BOOLEAN", {"default": True, "label_on": "enabled", "label_off": "disabled"}),
+            "basic_pipe": ("BASIC_PIPE",),
+            "wildcard": ("STRING", {"multiline": True, "dynamicPrompts": False}),
+            "refiner_ratio": ("FLOAT", {"default": 0.2, "min": 0.0, "max": 1.0}),
+        },
+            "optional": {
+                "detailer_hook": ("DETAILER_HOOK",),
+                "refiner_basic_pipe_opt": ("BASIC_PIPE",),
+            }
+        }
 
     RETURN_TYPES = ("IMAGE", "SEGS", "BASIC_PIPE", "IMAGE")
     RETURN_NAMES = ("image", "segs", "basic_pipe", "cnet_images")
@@ -287,7 +299,8 @@ class DetailerForEachPipe:
     CATEGORY = "ImpactPack/Detailer"
 
     def doit(self, image, segs, guide_size, guide_size_for, max_size, seed, steps, cfg, sampler_name, scheduler,
-             denoise, feather, noise_mask, force_inpaint, basic_pipe, wildcard, refiner_ratio=None, detailer_hook=None, refiner_basic_pipe_opt=None):
+             denoise, feather, noise_mask, force_inpaint, basic_pipe, wildcard, refiner_ratio=None, detailer_hook=None,
+             refiner_basic_pipe_opt=None):
 
         model, clip, vae, positive, negative = basic_pipe
 
@@ -297,11 +310,13 @@ class DetailerForEachPipe:
             refiner_model, refiner_clip, _, refiner_positive, refiner_negative = refiner_basic_pipe_opt
 
         enhanced_img, cropped, cropped_enhanced, cropped_enhanced_alpha, cnet_pil_list = \
-            DetailerForEach.do_detail(image, segs, model, clip, vae, guide_size, guide_size_for, max_size, seed, steps, cfg,
+            DetailerForEach.do_detail(image, segs, model, clip, vae, guide_size, guide_size_for, max_size, seed, steps,
+                                      cfg,
                                       sampler_name, scheduler, positive, negative, denoise, feather, noise_mask,
                                       force_inpaint, wildcard, detailer_hook,
                                       refiner_ratio=refiner_ratio, refiner_model=refiner_model,
-                                      refiner_clip=refiner_clip, refiner_positive=refiner_positive, refiner_negative=refiner_negative)
+                                      refiner_clip=refiner_clip, refiner_positive=refiner_positive,
+                                      refiner_negative=refiner_negative)
 
         # set fallback image
         if len(cnet_pil_list) == 0:
@@ -314,46 +329,48 @@ class FaceDetailer:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                     "image": ("IMAGE", ),
-                     "model": ("MODEL",),
-                     "clip": ("CLIP",),
-                     "vae": ("VAE",),
-                     "guide_size": ("FLOAT", {"default": 256, "min": 64, "max": nodes.MAX_RESOLUTION, "step": 8}),
-                     "guide_size_for": ("BOOLEAN", {"default": True, "label_on": "bbox", "label_off": "crop_region"}),
-                     "max_size": ("FLOAT", {"default": 768, "min": 64, "max": nodes.MAX_RESOLUTION, "step": 8}),
-                     "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
-                     "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
-                     "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
-                     "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
-                     "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
-                     "positive": ("CONDITIONING",),
-                     "negative": ("CONDITIONING",),
-                     "denoise": ("FLOAT", {"default": 0.5, "min": 0.0001, "max": 1.0, "step": 0.01}),
-                     "feather": ("INT", {"default": 5, "min": 0, "max": 100, "step": 1}),
-                     "noise_mask": ("BOOLEAN", {"default": True, "label_on": "enabled", "label_off": "disabled"}),
-                     "force_inpaint": ("BOOLEAN", {"default": True, "label_on": "enabled", "label_off": "disabled"}),
+            "image": ("IMAGE",),
+            "model": ("MODEL",),
+            "clip": ("CLIP",),
+            "vae": ("VAE",),
+            "guide_size": ("FLOAT", {"default": 256, "min": 64, "max": nodes.MAX_RESOLUTION, "step": 8}),
+            "guide_size_for": ("BOOLEAN", {"default": True, "label_on": "bbox", "label_off": "crop_region"}),
+            "max_size": ("FLOAT", {"default": 768, "min": 64, "max": nodes.MAX_RESOLUTION, "step": 8}),
+            "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
+            "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
+            "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
+            "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
+            "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
+            "positive": ("CONDITIONING",),
+            "negative": ("CONDITIONING",),
+            "denoise": ("FLOAT", {"default": 0.5, "min": 0.0001, "max": 1.0, "step": 0.01}),
+            "feather": ("INT", {"default": 5, "min": 0, "max": 100, "step": 1}),
+            "noise_mask": ("BOOLEAN", {"default": True, "label_on": "enabled", "label_off": "disabled"}),
+            "force_inpaint": ("BOOLEAN", {"default": True, "label_on": "enabled", "label_off": "disabled"}),
 
-                     "bbox_threshold": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 1.0, "step": 0.01}),
-                     "bbox_dilation": ("INT", {"default": 10, "min": -512, "max": 512, "step": 1}),
-                     "bbox_crop_factor": ("FLOAT", {"default": 3.0, "min": 1.0, "max": 10, "step": 0.1}),
+            "bbox_threshold": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 1.0, "step": 0.01}),
+            "bbox_dilation": ("INT", {"default": 10, "min": -512, "max": 512, "step": 1}),
+            "bbox_crop_factor": ("FLOAT", {"default": 3.0, "min": 1.0, "max": 10, "step": 0.1}),
 
-                     "sam_detection_hint": (["center-1", "horizontal-2", "vertical-2", "rect-4", "diamond-4", "mask-area", "mask-points", "mask-point-bbox", "none"],),
-                     "sam_dilation": ("INT", {"default": 0, "min": -512, "max": 512, "step": 1}),
-                     "sam_threshold": ("FLOAT", {"default": 0.93, "min": 0.0, "max": 1.0, "step": 0.01}),
-                     "sam_bbox_expansion": ("INT", {"default": 0, "min": 0, "max": 1000, "step": 1}),
-                     "sam_mask_hint_threshold": ("FLOAT", {"default": 0.7, "min": 0.0, "max": 1.0, "step": 0.01}),
-                     "sam_mask_hint_use_negative": (["False", "Small", "Outter"],),
+            "sam_detection_hint": (
+                ["center-1", "horizontal-2", "vertical-2", "rect-4", "diamond-4", "mask-area", "mask-points",
+                 "mask-point-bbox", "none"],),
+            "sam_dilation": ("INT", {"default": 0, "min": -512, "max": 512, "step": 1}),
+            "sam_threshold": ("FLOAT", {"default": 0.93, "min": 0.0, "max": 1.0, "step": 0.01}),
+            "sam_bbox_expansion": ("INT", {"default": 0, "min": 0, "max": 1000, "step": 1}),
+            "sam_mask_hint_threshold": ("FLOAT", {"default": 0.7, "min": 0.0, "max": 1.0, "step": 0.01}),
+            "sam_mask_hint_use_negative": (["False", "Small", "Outter"],),
 
-                     "drop_size": ("INT", {"min": 1, "max": MAX_RESOLUTION, "step": 1, "default": 10}),
+            "drop_size": ("INT", {"min": 1, "max": MAX_RESOLUTION, "step": 1, "default": 10}),
 
-                     "bbox_detector": ("BBOX_DETECTOR", ),
-                     "wildcard": ("STRING", {"multiline": True, "dynamicPrompts": False}),
-                     },
-                "optional": {
-                    "sam_model_opt": ("SAM_MODEL", ),
-                    "segm_detector_opt": ("SEGM_DETECTOR", ),
-                    "detailer_hook": ("DETAILER_HOOK",)
-                }}
+            "bbox_detector": ("BBOX_DETECTOR",),
+            "wildcard": ("STRING", {"multiline": True, "dynamicPrompts": False}),
+        },
+            "optional": {
+                "sam_model_opt": ("SAM_MODEL",),
+                "segm_detector_opt": ("SEGM_DETECTOR",),
+                "detailer_hook": ("DETAILER_HOOK",)
+            }}
 
     RETURN_TYPES = ("IMAGE", "IMAGE", "IMAGE", "MASK", "DETAILER_PIPE", "IMAGE")
     RETURN_NAMES = ("image", "cropped_refined", "cropped_enhanced_alpha", "mask", "detailer_pipe", "cnet_images")
@@ -363,70 +380,86 @@ class FaceDetailer:
     CATEGORY = "ImpactPack/Simple"
 
     @staticmethod
-    def enhance_face(image, model, clip, vae, guide_size, guide_size_for_bbox, max_size, seed, steps, cfg, sampler_name, scheduler,
+    def enhance_face(image, model, clip, vae, guide_size, guide_size_for_bbox, max_size, seed, steps, cfg, sampler_name,
+                     scheduler,
                      positive, negative, denoise, feather, noise_mask, force_inpaint,
                      bbox_threshold, bbox_dilation, bbox_crop_factor,
                      sam_detection_hint, sam_dilation, sam_threshold, sam_bbox_expansion, sam_mask_hint_threshold,
                      sam_mask_hint_use_negative, drop_size,
                      bbox_detector, segm_detector=None, sam_model_opt=None, wildcard_opt=None, detailer_hook=None,
-                     refiner_ratio=None, refiner_model=None, refiner_clip=None, refiner_positive=None, refiner_negative=None):
+                     refiner_ratio=None, refiner_model=None, refiner_clip=None, refiner_positive=None,
+                     refiner_negative=None):
 
         # make default prompt as 'face' if empty prompt for CLIPSeg
-        bbox_detector.setAux('face')
-        segs = bbox_detector.detect(image, bbox_threshold, bbox_dilation, bbox_crop_factor, drop_size)
-        bbox_detector.setAux(None)
+        images = image
+        result_images = pytorch.zeros_like(images)
 
-        # bbox + sam combination
-        if sam_model_opt is not None:
-            sam_mask = core.make_sam_mask(sam_model_opt, segs, image, sam_detection_hint, sam_dilation,
-                                          sam_threshold, sam_bbox_expansion, sam_mask_hint_threshold,
-                                          sam_mask_hint_use_negative, )
-            segs = core.segs_bitwise_and_mask(segs, sam_mask)
+        for i, image in enumerate(images):
+            print(f'run:{i}/{images.shape[0]}\n')
+            image = image.unsqueeze(0)
 
-        elif segm_detector is not None:
-            segm_segs = segm_detector.detect(image, bbox_threshold, bbox_dilation, bbox_crop_factor, drop_size)
-            if hasattr(segm_detector, 'override_bbox_by_segm') and segm_detector.override_bbox_by_segm:
-                segs = segm_segs
-            else:
-                segm_mask = core.segs_to_combined_mask(segm_segs)
-                segs = core.segs_bitwise_and_mask(segs, segm_mask)
+            bbox_detector.setAux('face')
+            segs = bbox_detector.detect(image, bbox_threshold, bbox_dilation, bbox_crop_factor, drop_size)
+            bbox_detector.setAux(None)
 
-        enhanced_img, _, cropped_enhanced, cropped_enhanced_alpha, cnet_pil_list = \
-            DetailerForEach.do_detail(image, segs, model, clip, vae, guide_size, guide_size_for_bbox, max_size, seed, steps, cfg,
-                                      sampler_name, scheduler, positive, negative, denoise, feather, noise_mask,
-                                      force_inpaint, wildcard_opt, detailer_hook,
-                                      refiner_ratio=refiner_ratio, refiner_model=refiner_model,
-                                      refiner_clip=refiner_clip, refiner_positive=refiner_positive,
-                                      refiner_negative=refiner_negative)
+            # bbox + sam combination
+            if sam_model_opt is not None:
+                sam_mask = core.make_sam_mask(sam_model_opt, segs, image, sam_detection_hint, sam_dilation,
+                                              sam_threshold, sam_bbox_expansion, sam_mask_hint_threshold,
+                                              sam_mask_hint_use_negative, )
+                segs = core.segs_bitwise_and_mask(segs, sam_mask)
 
-        # Mask Generator
-        mask = core.segs_to_combined_mask(segs)
+            elif segm_detector is not None:
+                segm_segs = segm_detector.detect(image, bbox_threshold, bbox_dilation, bbox_crop_factor, drop_size)
+                if hasattr(segm_detector, 'override_bbox_by_segm') and segm_detector.override_bbox_by_segm:
+                    segs = segm_segs
+                else:
+                    segm_mask = core.segs_to_combined_mask(segm_segs)
+                    segs = core.segs_bitwise_and_mask(segs, segm_mask)
 
-        if len(cropped_enhanced) == 0:
-            cropped_enhanced = [empty_pil_tensor()]
+            enhanced_img, _, cropped_enhanced, cropped_enhanced_alpha, cnet_pil_list = \
+                DetailerForEach.do_detail(image, segs, model, clip, vae, guide_size, guide_size_for_bbox, max_size,
+                                          seed, steps, cfg,
+                                          sampler_name, scheduler, positive, negative, denoise, feather, noise_mask,
+                                          force_inpaint, wildcard_opt, detailer_hook,
+                                          refiner_ratio=refiner_ratio, refiner_model=refiner_model,
+                                          refiner_clip=refiner_clip, refiner_positive=refiner_positive,
+                                          refiner_negative=refiner_negative)
+            result_images[i] = enhanced_img
+            # Mask Generator
+            mask = core.segs_to_combined_mask(segs)
 
-        if len(cropped_enhanced_alpha) == 0:
-            cropped_enhanced_alpha = [empty_pil_tensor()]
+            if len(cropped_enhanced) == 0:
+                cropped_enhanced = [empty_pil_tensor()]
 
-        if len(cnet_pil_list) == 0:
-            cnet_pil_list = [empty_pil_tensor()]
+            if len(cropped_enhanced_alpha) == 0:
+                cropped_enhanced_alpha = [empty_pil_tensor()]
 
-        return enhanced_img, cropped_enhanced, cropped_enhanced_alpha, mask, cnet_pil_list
+            if len(cnet_pil_list) == 0:
+                cnet_pil_list = [empty_pil_tensor()]
 
-    def doit(self, image, model, clip, vae, guide_size, guide_size_for, max_size, seed, steps, cfg, sampler_name, scheduler,
+        return result_images, cropped_enhanced, cropped_enhanced_alpha, mask, cnet_pil_list
+
+    def doit(self, image, model, clip, vae, guide_size, guide_size_for, max_size, seed, steps, cfg, sampler_name,
+             scheduler,
              positive, negative, denoise, feather, noise_mask, force_inpaint,
              bbox_threshold, bbox_dilation, bbox_crop_factor,
              sam_detection_hint, sam_dilation, sam_threshold, sam_bbox_expansion, sam_mask_hint_threshold,
-             sam_mask_hint_use_negative, drop_size, bbox_detector, wildcard, sam_model_opt=None, segm_detector_opt=None, detailer_hook=None):
+             sam_mask_hint_use_negative, drop_size, bbox_detector, wildcard, sam_model_opt=None, segm_detector_opt=None,
+             detailer_hook=None):
 
         enhanced_img, cropped_enhanced, cropped_enhanced_alpha, mask, cnet_pil_list = FaceDetailer.enhance_face(
             image, model, clip, vae, guide_size, guide_size_for, max_size, seed, steps, cfg, sampler_name, scheduler,
             positive, negative, denoise, feather, noise_mask, force_inpaint,
             bbox_threshold, bbox_dilation, bbox_crop_factor,
             sam_detection_hint, sam_dilation, sam_threshold, sam_bbox_expansion, sam_mask_hint_threshold,
-            sam_mask_hint_use_negative, drop_size, bbox_detector, segm_detector_opt, sam_model_opt, wildcard, detailer_hook)
+            sam_mask_hint_use_negative, drop_size, bbox_detector, segm_detector_opt, sam_model_opt, wildcard,
+            detailer_hook)
 
-        pipe = (model, clip, vae, positive, negative, wildcard, bbox_detector, segm_detector_opt, sam_model_opt, detailer_hook, None, None, None, None)
+        pipe = (
+            model, clip, vae, positive, negative, wildcard, bbox_detector, segm_detector_opt, sam_model_opt,
+            detailer_hook,
+            None, None, None, None)
         return enhanced_img, cropped_enhanced, cropped_enhanced_alpha, mask, pipe, cnet_pil_list
 
 
@@ -436,16 +469,16 @@ class LatentPixelScale:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                     "samples": ("LATENT", ),
-                     "scale_method": (s.upscale_methods,),
-                     "scale_factor": ("FLOAT", {"default": 1.5, "min": 0.1, "max": 10000, "step": 0.1}),
-                     "vae": ("VAE", ),
-                     "use_tiled_vae": ("BOOLEAN", {"default": False, "label_on": "enabled", "label_off": "disabled"}),
-                    },
-                "optional": {
-                        "upscale_model_opt": ("UPSCALE_MODEL", ),
-                    }
-                }
+            "samples": ("LATENT",),
+            "scale_method": (s.upscale_methods,),
+            "scale_factor": ("FLOAT", {"default": 1.5, "min": 0.1, "max": 10000, "step": 0.1}),
+            "vae": ("VAE",),
+            "use_tiled_vae": ("BOOLEAN", {"default": False, "label_on": "enabled", "label_off": "disabled"}),
+        },
+            "optional": {
+                "upscale_model_opt": ("UPSCALE_MODEL",),
+            }
+        }
 
     RETURN_TYPES = ("LATENT",)
     FUNCTION = "doit"
@@ -454,9 +487,11 @@ class LatentPixelScale:
 
     def doit(self, samples, scale_method, scale_factor, vae, use_tiled_vae, upscale_model_opt=None):
         if upscale_model_opt is None:
-            latent = core.latent_upscale_on_pixel_space(samples, scale_method, scale_factor, vae, use_tile=use_tiled_vae)
+            latent = core.latent_upscale_on_pixel_space(samples, scale_method, scale_factor, vae,
+                                                        use_tile=use_tiled_vae)
         else:
-            latent = core.latent_upscale_on_pixel_space_with_model(samples, scale_method, upscale_model_opt, scale_factor, vae, use_tile=use_tiled_vae)
+            latent = core.latent_upscale_on_pixel_space_with_model(samples, scale_method, upscale_model_opt,
+                                                                   scale_factor, vae, use_tile=use_tiled_vae)
         return (latent,)
 
 
@@ -466,11 +501,11 @@ class NoiseInjectionDetailerHookProvider:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                     "source": (["CPU", "GPU"],),
-                     "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
-                     "strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 200.0, "step": 0.01}),
-                    },
-                }
+            "source": (["CPU", "GPU"],),
+            "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
+            "strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 200.0, "step": 0.01}),
+        },
+        }
 
     RETURN_TYPES = ("DETAILER_HOOK",)
     FUNCTION = "doit"
@@ -481,9 +516,10 @@ class NoiseInjectionDetailerHookProvider:
         try:
             hook = core.InjectNoiseHook(source, seed, strength, strength)
             hook.set_steps((1, 1))
-            return (hook, )
+            return (hook,)
         except Exception as e:
-            print("[ERROR] NoiseInjectionDetailerHookProvider: 'ComfyUI Noise' custom node isn't installed. You must install 'BlenderNeko/ComfyUI Noise' extension to use this node.")
+            print(
+                "[ERROR] NoiseInjectionDetailerHookProvider: 'ComfyUI Noise' custom node isn't installed. You must install 'BlenderNeko/ComfyUI Noise' extension to use this node.")
             print(f"\t{e}")
             pass
 
@@ -494,10 +530,10 @@ class CfgScheduleHookProvider:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                     "schedule_for_iteration": (s.schedules,),
-                     "target_cfg": ("FLOAT", {"default": 3.0, "min": 0.0, "max": 100.0}),
-                    },
-                }
+            "schedule_for_iteration": (s.schedules,),
+            "target_cfg": ("FLOAT", {"default": 3.0, "min": 0.0, "max": 100.0}),
+        },
+        }
 
     RETURN_TYPES = ("PK_HOOK",)
     FUNCTION = "doit"
@@ -509,7 +545,7 @@ class CfgScheduleHookProvider:
         if schedule_for_iteration == "simple":
             hook = core.SimpleCfgScheduleHook(target_cfg)
 
-        return (hook, )
+        return (hook,)
 
 
 class NoiseInjectionHookProvider:
@@ -518,13 +554,13 @@ class NoiseInjectionHookProvider:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                     "schedule_for_iteration": (s.schedules,),
-                     "source": (["CPU", "GPU"],),
-                     "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
-                     "start_strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 200.0, "step": 0.01}),
-                     "end_strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 200.0, "step": 0.01}),
-                    },
-                }
+            "schedule_for_iteration": (s.schedules,),
+            "source": (["CPU", "GPU"],),
+            "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
+            "start_strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 200.0, "step": 0.01}),
+            "end_strength": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 200.0, "step": 0.01}),
+        },
+        }
 
     RETURN_TYPES = ("PK_HOOK",)
     FUNCTION = "doit"
@@ -537,9 +573,10 @@ class NoiseInjectionHookProvider:
             if schedule_for_iteration == "simple":
                 hook = core.InjectNoiseHook(source, seed, start_strength, end_strength)
 
-            return (hook, )
+            return (hook,)
         except Exception as e:
-            print("[ERROR] NoiseInjectionHookProvider: 'ComfyUI Noise' custom node isn't installed. You must install 'BlenderNeko/ComfyUI Noise' extension to use this node.")
+            print(
+                "[ERROR] NoiseInjectionHookProvider: 'ComfyUI Noise' custom node isn't installed. You must install 'BlenderNeko/ComfyUI Noise' extension to use this node.")
             print(f"\t{e}")
             pass
 
@@ -550,10 +587,10 @@ class DenoiseScheduleHookProvider:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                     "schedule_for_iteration": (s.schedules,),
-                     "target_denoise": ("FLOAT", {"default": 0.2, "min": 0.0, "max": 100.0}),
-                    },
-                }
+            "schedule_for_iteration": (s.schedules,),
+            "target_denoise": ("FLOAT", {"default": 0.2, "min": 0.0, "max": 100.0}),
+        },
+        }
 
     RETURN_TYPES = ("PK_HOOK",)
     FUNCTION = "doit"
@@ -565,17 +602,17 @@ class DenoiseScheduleHookProvider:
         if schedule_for_iteration == "simple":
             hook = core.SimpleDenoiseScheduleHook(target_denoise)
 
-        return (hook, )
+        return (hook,)
 
 
 class PixelKSampleHookCombine:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                     "hook1": ("PK_HOOK",),
-                     "hook2": ("PK_HOOK",),
-                    },
-                }
+            "hook1": ("PK_HOOK",),
+            "hook2": ("PK_HOOK",),
+        },
+        }
 
     RETURN_TYPES = ("PK_HOOK",)
     FUNCTION = "doit"
@@ -584,7 +621,7 @@ class PixelKSampleHookCombine:
 
     def doit(self, hook1, hook2):
         hook = core.PixelKSampleHookCombine(hook1, hook2)
-        return (hook, )
+        return (hook,)
 
 
 class PixelTiledKSampleUpscalerProvider:
@@ -593,38 +630,43 @@ class PixelTiledKSampleUpscalerProvider:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                    "scale_method": (s.upscale_methods,),
-                    "model": ("MODEL",),
-                    "vae": ("VAE",),
-                    "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
-                    "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
-                    "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
-                    "sampler_name": (comfy.samplers.KSampler.SAMPLERS, ),
-                    "scheduler": (comfy.samplers.KSampler.SCHEDULERS, ),
-                    "positive": ("CONDITIONING", ),
-                    "negative": ("CONDITIONING", ),
-                    "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
-                    "tile_width": ("INT", {"default": 512, "min": 320, "max": MAX_RESOLUTION, "step": 64}),
-                    "tile_height": ("INT", {"default": 512, "min": 320, "max": MAX_RESOLUTION, "step": 64}),
-                    "tiling_strategy": (["random", "padded", 'simple'], ),
-                    },
-                "optional": {
-                        "upscale_model_opt": ("UPSCALE_MODEL", ),
-                        "pk_hook_opt": ("PK_HOOK", ),
-                    }
-                }
+            "scale_method": (s.upscale_methods,),
+            "model": ("MODEL",),
+            "vae": ("VAE",),
+            "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
+            "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
+            "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
+            "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
+            "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
+            "positive": ("CONDITIONING",),
+            "negative": ("CONDITIONING",),
+            "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
+            "tile_width": ("INT", {"default": 512, "min": 320, "max": MAX_RESOLUTION, "step": 64}),
+            "tile_height": ("INT", {"default": 512, "min": 320, "max": MAX_RESOLUTION, "step": 64}),
+            "tiling_strategy": (["random", "padded", 'simple'],),
+        },
+            "optional": {
+                "upscale_model_opt": ("UPSCALE_MODEL",),
+                "pk_hook_opt": ("PK_HOOK",),
+            }
+        }
 
     RETURN_TYPES = ("UPSCALER",)
     FUNCTION = "doit"
 
     CATEGORY = "ImpactPack/Upscale"
 
-    def doit(self, scale_method, model, vae, seed, steps, cfg, sampler_name, scheduler, positive, negative, denoise, tile_width, tile_height, tiling_strategy, upscale_model_opt=None, pk_hook_opt=None):
+    def doit(self, scale_method, model, vae, seed, steps, cfg, sampler_name, scheduler, positive, negative, denoise,
+             tile_width, tile_height, tiling_strategy, upscale_model_opt=None, pk_hook_opt=None):
         if "BNK_TiledKSampler" in nodes.NODE_CLASS_MAPPINGS:
-            upscaler = core.PixelTiledKSampleUpscaler(scale_method, model, vae, seed, steps, cfg, sampler_name, scheduler, positive, negative, denoise, tile_width, tile_height, tiling_strategy, upscale_model_opt, pk_hook_opt, tile_size=max(tile_width, tile_height))
-            return (upscaler, )
+            upscaler = core.PixelTiledKSampleUpscaler(scale_method, model, vae, seed, steps, cfg, sampler_name,
+                                                      scheduler, positive, negative, denoise, tile_width, tile_height,
+                                                      tiling_strategy, upscale_model_opt, pk_hook_opt,
+                                                      tile_size=max(tile_width, tile_height))
+            return (upscaler,)
         else:
-            print("[ERROR] PixelTiledKSampleUpscalerProvider: ComfyUI_TiledKSampler custom node isn't installed. You must install BlenderNeko/ComfyUI_TiledKSampler extension to use this node.")
+            print(
+                "[ERROR] PixelTiledKSampleUpscalerProvider: ComfyUI_TiledKSampler custom node isn't installed. You must install BlenderNeko/ComfyUI_TiledKSampler extension to use this node.")
 
 
 class PixelTiledKSampleUpscalerProviderPipe:
@@ -633,36 +675,41 @@ class PixelTiledKSampleUpscalerProviderPipe:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                    "scale_method": (s.upscale_methods,),
-                    "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
-                    "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
-                    "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
-                    "sampler_name": (comfy.samplers.KSampler.SAMPLERS, ),
-                    "scheduler": (comfy.samplers.KSampler.SCHEDULERS, ),
-                    "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
-                    "tile_width": ("INT", {"default": 512, "min": 320, "max": MAX_RESOLUTION, "step": 64}),
-                    "tile_height": ("INT", {"default": 512, "min": 320, "max": MAX_RESOLUTION, "step": 64}),
-                    "tiling_strategy": (["random", "padded", 'simple'], ),
-                    "basic_pipe": ("BASIC_PIPE",)
-                    },
-                "optional": {
-                        "upscale_model_opt": ("UPSCALE_MODEL", ),
-                        "pk_hook_opt": ("PK_HOOK", ),
-                    }
-                }
+            "scale_method": (s.upscale_methods,),
+            "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
+            "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
+            "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
+            "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
+            "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
+            "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
+            "tile_width": ("INT", {"default": 512, "min": 320, "max": MAX_RESOLUTION, "step": 64}),
+            "tile_height": ("INT", {"default": 512, "min": 320, "max": MAX_RESOLUTION, "step": 64}),
+            "tiling_strategy": (["random", "padded", 'simple'],),
+            "basic_pipe": ("BASIC_PIPE",)
+        },
+            "optional": {
+                "upscale_model_opt": ("UPSCALE_MODEL",),
+                "pk_hook_opt": ("PK_HOOK",),
+            }
+        }
 
     RETURN_TYPES = ("UPSCALER",)
     FUNCTION = "doit"
 
     CATEGORY = "ImpactPack/Upscale"
 
-    def doit(self, scale_method, seed, steps, cfg, sampler_name, scheduler, denoise, tile_width, tile_height, tiling_strategy, basic_pipe, upscale_model_opt=None, pk_hook_opt=None):
+    def doit(self, scale_method, seed, steps, cfg, sampler_name, scheduler, denoise, tile_width, tile_height,
+             tiling_strategy, basic_pipe, upscale_model_opt=None, pk_hook_opt=None):
         if "BNK_TiledKSampler" in nodes.NODE_CLASS_MAPPINGS:
             model, _, vae, positive, negative = basic_pipe
-            upscaler = core.PixelTiledKSampleUpscaler(scale_method, model, vae, seed, steps, cfg, sampler_name, scheduler, positive, negative, denoise, tile_width, tile_height, tiling_strategy, upscale_model_opt, pk_hook_opt, tile_size=max(tile_width, tile_height))
-            return (upscaler, )
+            upscaler = core.PixelTiledKSampleUpscaler(scale_method, model, vae, seed, steps, cfg, sampler_name,
+                                                      scheduler, positive, negative, denoise, tile_width, tile_height,
+                                                      tiling_strategy, upscale_model_opt, pk_hook_opt,
+                                                      tile_size=max(tile_width, tile_height))
+            return (upscaler,)
         else:
-            print("[ERROR] PixelTiledKSampleUpscalerProviderPipe: ComfyUI_TiledKSampler custom node isn't installed. You must install BlenderNeko/ComfyUI_TiledKSampler extension to use this node.")
+            print(
+                "[ERROR] PixelTiledKSampleUpscalerProviderPipe: ComfyUI_TiledKSampler custom node isn't installed. You must install BlenderNeko/ComfyUI_TiledKSampler extension to use this node.")
 
 
 class PixelKSampleUpscalerProvider:
@@ -671,25 +718,25 @@ class PixelKSampleUpscalerProvider:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                    "scale_method": (s.upscale_methods,),
-                    "model": ("MODEL",),
-                    "vae": ("VAE",),
-                    "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
-                    "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
-                    "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
-                    "sampler_name": (comfy.samplers.KSampler.SAMPLERS, ),
-                    "scheduler": (comfy.samplers.KSampler.SCHEDULERS, ),
-                    "positive": ("CONDITIONING", ),
-                    "negative": ("CONDITIONING", ),
-                    "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
-                    "use_tiled_vae": ("BOOLEAN", {"default": False, "label_on": "enabled", "label_off": "disabled"}),
-                    "tile_size": ("INT", {"default": 512, "min": 320, "max": 4096, "step": 64}),
-                    },
-                "optional": {
-                        "upscale_model_opt": ("UPSCALE_MODEL", ),
-                        "pk_hook_opt": ("PK_HOOK", ),
-                    }
-                }
+            "scale_method": (s.upscale_methods,),
+            "model": ("MODEL",),
+            "vae": ("VAE",),
+            "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
+            "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
+            "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
+            "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
+            "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
+            "positive": ("CONDITIONING",),
+            "negative": ("CONDITIONING",),
+            "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
+            "use_tiled_vae": ("BOOLEAN", {"default": False, "label_on": "enabled", "label_off": "disabled"}),
+            "tile_size": ("INT", {"default": 512, "min": 320, "max": 4096, "step": 64}),
+        },
+            "optional": {
+                "upscale_model_opt": ("UPSCALE_MODEL",),
+                "pk_hook_opt": ("PK_HOOK",),
+            }
+        }
 
     RETURN_TYPES = ("UPSCALER",)
     FUNCTION = "doit"
@@ -701,7 +748,7 @@ class PixelKSampleUpscalerProvider:
         upscaler = core.PixelKSampleUpscaler(scale_method, model, vae, seed, steps, cfg, sampler_name, scheduler,
                                              positive, negative, denoise, use_tiled_vae, upscale_model_opt, pk_hook_opt,
                                              tile_size=tile_size)
-        return (upscaler, )
+        return (upscaler,)
 
 
 class PixelKSampleUpscalerProviderPipe(PixelKSampleUpscalerProvider):
@@ -710,22 +757,22 @@ class PixelKSampleUpscalerProviderPipe(PixelKSampleUpscalerProvider):
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                    "scale_method": (s.upscale_methods,),
-                    "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
-                    "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
-                    "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
-                    "sampler_name": (comfy.samplers.KSampler.SAMPLERS, ),
-                    "scheduler": (comfy.samplers.KSampler.SCHEDULERS, ),
-                    "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
-                    "use_tiled_vae": ("BOOLEAN", {"default": False, "label_on": "enabled", "label_off": "disabled"}),
-                    "basic_pipe": ("BASIC_PIPE",),
-                    "tile_size": ("INT", {"default": 512, "min": 320, "max": 4096, "step": 64}),
-                    },
-                "optional": {
-                        "upscale_model_opt": ("UPSCALE_MODEL", ),
-                        "pk_hook_opt": ("PK_HOOK", ),
-                    }
-                }
+            "scale_method": (s.upscale_methods,),
+            "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
+            "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
+            "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
+            "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
+            "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
+            "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
+            "use_tiled_vae": ("BOOLEAN", {"default": False, "label_on": "enabled", "label_off": "disabled"}),
+            "basic_pipe": ("BASIC_PIPE",),
+            "tile_size": ("INT", {"default": 512, "min": 320, "max": 4096, "step": 64}),
+        },
+            "optional": {
+                "upscale_model_opt": ("UPSCALE_MODEL",),
+                "pk_hook_opt": ("PK_HOOK",),
+            }
+        }
 
     RETURN_TYPES = ("UPSCALER",)
     FUNCTION = "doit_pipe"
@@ -738,7 +785,7 @@ class PixelKSampleUpscalerProviderPipe(PixelKSampleUpscalerProvider):
         upscaler = core.PixelKSampleUpscaler(scale_method, model, vae, seed, steps, cfg, sampler_name, scheduler,
                                              positive, negative, denoise, use_tiled_vae, upscale_model_opt, pk_hook_opt,
                                              tile_size=tile_size)
-        return (upscaler, )
+        return (upscaler,)
 
 
 class TwoSamplersForMaskUpscalerProvider:
@@ -747,29 +794,29 @@ class TwoSamplersForMaskUpscalerProvider:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                     "scale_method": (s.upscale_methods,),
-                     "full_sample_schedule": (
-                         ["none", "interleave1", "interleave2", "interleave3",
-                          "last1", "last2",
-                          "interleave1+last1", "interleave2+last1", "interleave3+last1",
-                          ],),
-                     "use_tiled_vae": ("BOOLEAN", {"default": False, "label_on": "enabled", "label_off": "disabled"}),
-                     "base_sampler": ("KSAMPLER", ),
-                     "mask_sampler": ("KSAMPLER", ),
-                     "mask": ("MASK", ),
-                     "vae": ("VAE",),
-                     "tile_size": ("INT", {"default": 512, "min": 320, "max": 4096, "step": 64}),
-                     },
-                "optional": {
-                        "full_sampler_opt": ("KSAMPLER",),
-                        "upscale_model_opt": ("UPSCALE_MODEL", ),
-                        "pk_hook_base_opt": ("PK_HOOK", ),
-                        "pk_hook_mask_opt": ("PK_HOOK", ),
-                        "pk_hook_full_opt": ("PK_HOOK", ),
-                    }
-                }
+            "scale_method": (s.upscale_methods,),
+            "full_sample_schedule": (
+                ["none", "interleave1", "interleave2", "interleave3",
+                 "last1", "last2",
+                 "interleave1+last1", "interleave2+last1", "interleave3+last1",
+                 ],),
+            "use_tiled_vae": ("BOOLEAN", {"default": False, "label_on": "enabled", "label_off": "disabled"}),
+            "base_sampler": ("KSAMPLER",),
+            "mask_sampler": ("KSAMPLER",),
+            "mask": ("MASK",),
+            "vae": ("VAE",),
+            "tile_size": ("INT", {"default": 512, "min": 320, "max": 4096, "step": 64}),
+        },
+            "optional": {
+                "full_sampler_opt": ("KSAMPLER",),
+                "upscale_model_opt": ("UPSCALE_MODEL",),
+                "pk_hook_base_opt": ("PK_HOOK",),
+                "pk_hook_mask_opt": ("PK_HOOK",),
+                "pk_hook_full_opt": ("PK_HOOK",),
+            }
+        }
 
-    RETURN_TYPES = ("UPSCALER", )
+    RETURN_TYPES = ("UPSCALER",)
     FUNCTION = "doit"
 
     CATEGORY = "ImpactPack/Upscale"
@@ -778,9 +825,11 @@ class TwoSamplersForMaskUpscalerProvider:
              full_sampler_opt=None, upscale_model_opt=None,
              pk_hook_base_opt=None, pk_hook_mask_opt=None, pk_hook_full_opt=None, tile_size=512):
         upscaler = core.TwoSamplersForMaskUpscaler(scale_method, full_sample_schedule, use_tiled_vae,
-                                                   base_sampler, mask_sampler, mask, vae, full_sampler_opt, upscale_model_opt,
-                                                   pk_hook_base_opt, pk_hook_mask_opt, pk_hook_full_opt, tile_size=tile_size)
-        return (upscaler, )
+                                                   base_sampler, mask_sampler, mask, vae, full_sampler_opt,
+                                                   upscale_model_opt,
+                                                   pk_hook_base_opt, pk_hook_mask_opt, pk_hook_full_opt,
+                                                   tile_size=tile_size)
+        return (upscaler,)
 
 
 class TwoSamplersForMaskUpscalerProviderPipe:
@@ -789,29 +838,29 @@ class TwoSamplersForMaskUpscalerProviderPipe:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                     "scale_method": (s.upscale_methods,),
-                     "full_sample_schedule": (
-                         ["none", "interleave1", "interleave2", "interleave3",
-                          "last1", "last2",
-                          "interleave1+last1", "interleave2+last1", "interleave3+last1",
-                          ],),
-                     "use_tiled_vae": ("BOOLEAN", {"default": False, "label_on": "enabled", "label_off": "disabled"}),
-                     "base_sampler": ("KSAMPLER", ),
-                     "mask_sampler": ("KSAMPLER", ),
-                     "mask": ("MASK", ),
-                     "basic_pipe": ("BASIC_PIPE",),
-                     "tile_size": ("INT", {"default": 512, "min": 320, "max": 4096, "step": 64}),
-                     },
-                "optional": {
-                        "full_sampler_opt": ("KSAMPLER",),
-                        "upscale_model_opt": ("UPSCALE_MODEL", ),
-                        "pk_hook_base_opt": ("PK_HOOK", ),
-                        "pk_hook_mask_opt": ("PK_HOOK", ),
-                        "pk_hook_full_opt": ("PK_HOOK", ),
-                    }
-                }
+            "scale_method": (s.upscale_methods,),
+            "full_sample_schedule": (
+                ["none", "interleave1", "interleave2", "interleave3",
+                 "last1", "last2",
+                 "interleave1+last1", "interleave2+last1", "interleave3+last1",
+                 ],),
+            "use_tiled_vae": ("BOOLEAN", {"default": False, "label_on": "enabled", "label_off": "disabled"}),
+            "base_sampler": ("KSAMPLER",),
+            "mask_sampler": ("KSAMPLER",),
+            "mask": ("MASK",),
+            "basic_pipe": ("BASIC_PIPE",),
+            "tile_size": ("INT", {"default": 512, "min": 320, "max": 4096, "step": 64}),
+        },
+            "optional": {
+                "full_sampler_opt": ("KSAMPLER",),
+                "upscale_model_opt": ("UPSCALE_MODEL",),
+                "pk_hook_base_opt": ("PK_HOOK",),
+                "pk_hook_mask_opt": ("PK_HOOK",),
+                "pk_hook_full_opt": ("PK_HOOK",),
+            }
+        }
 
-    RETURN_TYPES = ("UPSCALER", )
+    RETURN_TYPES = ("UPSCALER",)
     FUNCTION = "doit"
 
     CATEGORY = "ImpactPack/Upscale"
@@ -819,28 +868,29 @@ class TwoSamplersForMaskUpscalerProviderPipe:
     def doit(self, scale_method, full_sample_schedule, use_tiled_vae, base_sampler, mask_sampler, mask, basic_pipe,
              full_sampler_opt=None, upscale_model_opt=None,
              pk_hook_base_opt=None, pk_hook_mask_opt=None, pk_hook_full_opt=None, tile_size=512):
-
         if len(mask.shape) == 3:
             mask = mask.squeeze(0)
 
         _, _, vae, _, _ = basic_pipe
         upscaler = core.TwoSamplersForMaskUpscaler(scale_method, full_sample_schedule, use_tiled_vae,
-                                                   base_sampler, mask_sampler, mask, vae, full_sampler_opt, upscale_model_opt,
-                                                   pk_hook_base_opt, pk_hook_mask_opt, pk_hook_full_opt, tile_size=tile_size)
-        return (upscaler, )
+                                                   base_sampler, mask_sampler, mask, vae, full_sampler_opt,
+                                                   upscale_model_opt,
+                                                   pk_hook_base_opt, pk_hook_mask_opt, pk_hook_full_opt,
+                                                   tile_size=tile_size)
+        return (upscaler,)
 
 
 class IterativeLatentUpscale:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                     "samples": ("LATENT", ),
-                     "upscale_factor": ("FLOAT", {"default": 1.5, "min": 1, "max": 10000, "step": 0.1}),
-                     "steps": ("INT", {"default": 3, "min": 1, "max": 10000, "step": 1}),
-                     "temp_prefix": ("STRING", {"default": ""}),
-                     "upscaler": ("UPSCALER",)
-                },
-                "hidden": {"unique_id": "UNIQUE_ID"},
+            "samples": ("LATENT",),
+            "upscale_factor": ("FLOAT", {"default": 1.5, "min": 1, "max": 10000, "step": 0.1}),
+            "steps": ("INT", {"default": 3, "min": 1, "max": 10000, "step": 1}),
+            "temp_prefix": ("STRING", {"default": ""}),
+            "upscaler": ("UPSCALER",)
+        },
+            "hidden": {"unique_id": "UNIQUE_ID"},
         }
 
     RETURN_TYPES = ("LATENT",)
@@ -850,28 +900,28 @@ class IterativeLatentUpscale:
     CATEGORY = "ImpactPack/Upscale"
 
     def doit(self, samples, upscale_factor, steps, temp_prefix, upscaler, unique_id):
-        w = samples['samples'].shape[3]*8  # image width
-        h = samples['samples'].shape[2]*8  # image height
+        w = samples['samples'].shape[3] * 8  # image width
+        h = samples['samples'].shape[2] * 8  # image height
 
         if temp_prefix == "":
             temp_prefix = None
 
-        upscale_factor_unit = max(0, (upscale_factor-1.0)/steps)
+        upscale_factor_unit = max(0, (upscale_factor - 1.0) / steps)
         current_latent = samples
         scale = 1
 
-        for i in range(steps-1):
+        for i in range(steps - 1):
             scale += upscale_factor_unit
-            new_w = w*scale
-            new_h = h*scale
-            core.update_node_status(unique_id, f"{i+1}/{steps} steps | x{scale:.2f}", (i+1)/steps)
-            print(f"IterativeLatentUpscale[{i+1}/{steps}]: {new_w:.1f}x{new_h:.1f} (scale:{scale:.2f}) ")
+            new_w = w * scale
+            new_h = h * scale
+            core.update_node_status(unique_id, f"{i + 1}/{steps} steps | x{scale:.2f}", (i + 1) / steps)
+            print(f"IterativeLatentUpscale[{i + 1}/{steps}]: {new_w:.1f}x{new_h:.1f} (scale:{scale:.2f}) ")
             step_info = i, steps
             current_latent = upscaler.upscale_shape(step_info, current_latent, new_w, new_h, temp_prefix)
 
         if scale < upscale_factor:
-            new_w = w*upscale_factor
-            new_h = h*upscale_factor
+            new_w = w * upscale_factor
+            new_h = h * upscale_factor
             core.update_node_status(unique_id, f"Final step | x{upscale_factor:.2f}", 1.0)
             print(f"IterativeLatentUpscale[Final]: {new_w:.1f}x{new_h:.1f} (scale:{upscale_factor:.2f}) ")
             step_info = steps, steps
@@ -879,21 +929,21 @@ class IterativeLatentUpscale:
 
         core.update_node_status(unique_id, "", None)
 
-        return (current_latent, )
+        return (current_latent,)
 
 
 class IterativeImageUpscale:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                     "pixels": ("IMAGE", ),
-                     "upscale_factor": ("FLOAT", {"default": 1.5, "min": 1, "max": 10000, "step": 0.1}),
-                     "steps": ("INT", {"default": 3, "min": 1, "max": 10000, "step": 1}),
-                     "temp_prefix": ("STRING", {"default": ""}),
-                     "upscaler": ("UPSCALER",),
-                     "vae": ("VAE",),
-                },
-                "hidden": {"unique_id": "UNIQUE_ID"}
+            "pixels": ("IMAGE",),
+            "upscale_factor": ("FLOAT", {"default": 1.5, "min": 1, "max": 10000, "step": 0.1}),
+            "steps": ("INT", {"default": 3, "min": 1, "max": 10000, "step": 1}),
+            "temp_prefix": ("STRING", {"default": ""}),
+            "upscaler": ("UPSCALER",),
+            "vae": ("VAE",),
+        },
+            "hidden": {"unique_id": "UNIQUE_ID"}
         }
 
     RETURN_TYPES = ("IMAGE",)
@@ -922,43 +972,45 @@ class IterativeImageUpscale:
 
         core.update_node_status(unique_id, "", None)
 
-        return (pixels, )
+        return (pixels,)
 
 
 class FaceDetailerPipe:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                     "image": ("IMAGE", ),
-                     "detailer_pipe": ("DETAILER_PIPE",),
-                     "guide_size": ("FLOAT", {"default": 256, "min": 64, "max": nodes.MAX_RESOLUTION, "step": 8}),
-                     "guide_size_for": ("BOOLEAN", {"default": True, "label_on": "bbox", "label_off": "crop_region"}),
-                     "max_size": ("FLOAT", {"default": 768, "min": 64, "max": nodes.MAX_RESOLUTION, "step": 8}),
-                     "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
-                     "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
-                     "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
-                     "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
-                     "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
-                     "denoise": ("FLOAT", {"default": 0.5, "min": 0.0001, "max": 1.0, "step": 0.01}),
-                     "feather": ("INT", {"default": 5, "min": 0, "max": 100, "step": 1}),
-                     "noise_mask": ("BOOLEAN", {"default": True, "label_on": "enabled", "label_off": "disabled"}),
-                     "force_inpaint": ("BOOLEAN", {"default": False, "label_on": "enabled", "label_off": "disabled"}),
+            "image": ("IMAGE",),
+            "detailer_pipe": ("DETAILER_PIPE",),
+            "guide_size": ("FLOAT", {"default": 256, "min": 64, "max": nodes.MAX_RESOLUTION, "step": 8}),
+            "guide_size_for": ("BOOLEAN", {"default": True, "label_on": "bbox", "label_off": "crop_region"}),
+            "max_size": ("FLOAT", {"default": 768, "min": 64, "max": nodes.MAX_RESOLUTION, "step": 8}),
+            "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
+            "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
+            "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0}),
+            "sampler_name": (comfy.samplers.KSampler.SAMPLERS,),
+            "scheduler": (comfy.samplers.KSampler.SCHEDULERS,),
+            "denoise": ("FLOAT", {"default": 0.5, "min": 0.0001, "max": 1.0, "step": 0.01}),
+            "feather": ("INT", {"default": 5, "min": 0, "max": 100, "step": 1}),
+            "noise_mask": ("BOOLEAN", {"default": True, "label_on": "enabled", "label_off": "disabled"}),
+            "force_inpaint": ("BOOLEAN", {"default": False, "label_on": "enabled", "label_off": "disabled"}),
 
-                     "bbox_threshold": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 1.0, "step": 0.01}),
-                     "bbox_dilation": ("INT", {"default": 10, "min": -512, "max": 512, "step": 1}),
-                     "bbox_crop_factor": ("FLOAT", {"default": 3.0, "min": 1.0, "max": 10, "step": 0.1}),
+            "bbox_threshold": ("FLOAT", {"default": 0.5, "min": 0.0, "max": 1.0, "step": 0.01}),
+            "bbox_dilation": ("INT", {"default": 10, "min": -512, "max": 512, "step": 1}),
+            "bbox_crop_factor": ("FLOAT", {"default": 3.0, "min": 1.0, "max": 10, "step": 0.1}),
 
-                     "sam_detection_hint": (["center-1", "horizontal-2", "vertical-2", "rect-4", "diamond-4", "mask-area", "mask-points", "mask-point-bbox", "none"],),
-                     "sam_dilation": ("INT", {"default": 0, "min": -512, "max": 512, "step": 1}),
-                     "sam_threshold": ("FLOAT", {"default": 0.93, "min": 0.0, "max": 1.0, "step": 0.01}),
-                     "sam_bbox_expansion": ("INT", {"default": 0, "min": 0, "max": 1000, "step": 1}),
-                     "sam_mask_hint_threshold": ("FLOAT", {"default": 0.7, "min": 0.0, "max": 1.0, "step": 0.01}),
-                     "sam_mask_hint_use_negative": (["False", "Small", "Outter"],),
+            "sam_detection_hint": (
+                ["center-1", "horizontal-2", "vertical-2", "rect-4", "diamond-4", "mask-area", "mask-points",
+                 "mask-point-bbox", "none"],),
+            "sam_dilation": ("INT", {"default": 0, "min": -512, "max": 512, "step": 1}),
+            "sam_threshold": ("FLOAT", {"default": 0.93, "min": 0.0, "max": 1.0, "step": 0.01}),
+            "sam_bbox_expansion": ("INT", {"default": 0, "min": 0, "max": 1000, "step": 1}),
+            "sam_mask_hint_threshold": ("FLOAT", {"default": 0.7, "min": 0.0, "max": 1.0, "step": 0.01}),
+            "sam_mask_hint_use_negative": (["False", "Small", "Outter"],),
 
-                     "drop_size": ("INT", {"min": 1, "max": MAX_RESOLUTION, "step": 1, "default": 10}),
-                     "refiner_ratio": ("FLOAT", {"default": 0.2, "min": 0.0, "max": 1.0}),
-                     },
-                }
+            "drop_size": ("INT", {"min": 1, "max": MAX_RESOLUTION, "step": 1, "default": 10}),
+            "refiner_ratio": ("FLOAT", {"default": 0.2, "min": 0.0, "max": 1.0}),
+        },
+        }
 
     RETURN_TYPES = ("IMAGE", "IMAGE", "IMAGE", "MASK", "DETAILER_PIPE", "IMAGE")
     RETURN_NAMES = ("image", "cropped_refined", "cropped_enhanced_alpha", "mask", "detailer_pipe", "cnet_images")
@@ -967,7 +1019,8 @@ class FaceDetailerPipe:
 
     CATEGORY = "ImpactPack/Simple"
 
-    def doit(self, image, detailer_pipe, guide_size, guide_size_for, max_size, seed, steps, cfg, sampler_name, scheduler,
+    def doit(self, image, detailer_pipe, guide_size, guide_size_for, max_size, seed, steps, cfg, sampler_name,
+             scheduler,
              denoise, feather, noise_mask, force_inpaint, bbox_threshold, bbox_dilation, bbox_crop_factor,
              sam_detection_hint, sam_dilation, sam_threshold, sam_bbox_expansion,
              sam_mask_hint_threshold, sam_mask_hint_use_negative, drop_size, refiner_ratio=None):
@@ -1030,7 +1083,7 @@ class DetailerForEachTest(DetailerForEach):
 
 
 class DetailerForEachTestPipe(DetailerForEachPipe):
-    RETURN_TYPES = ("IMAGE", "SEGS", "BASIC_PIPE", "IMAGE", "IMAGE", "IMAGE", "IMAGE", )
+    RETURN_TYPES = ("IMAGE", "SEGS", "BASIC_PIPE", "IMAGE", "IMAGE", "IMAGE", "IMAGE",)
     RETURN_NAMES = ("image", "segs", "basic_pipe", "cropped", "cropped_refined", "cropped_refined_alpha", 'cnet_images')
     OUTPUT_IS_LIST = (False, False, False, True, True, True, True)
 
@@ -1039,7 +1092,8 @@ class DetailerForEachTestPipe(DetailerForEachPipe):
     CATEGORY = "ImpactPack/Detailer"
 
     def doit(self, image, segs, guide_size, guide_size_for, max_size, seed, steps, cfg, sampler_name, scheduler,
-             denoise, feather, noise_mask, force_inpaint, basic_pipe, wildcard, refiner_ratio=None, detailer_hook=None, refiner_basic_pipe_opt=None):
+             denoise, feather, noise_mask, force_inpaint, basic_pipe, wildcard, refiner_ratio=None, detailer_hook=None,
+             refiner_basic_pipe_opt=None):
 
         model, clip, vae, positive, negative = basic_pipe
 
@@ -1049,7 +1103,8 @@ class DetailerForEachTestPipe(DetailerForEachPipe):
             refiner_model, refiner_clip, _, refiner_positive, refiner_negative = refiner_basic_pipe_opt
 
         enhanced_img, cropped, cropped_enhanced, cropped_enhanced_alpha, cnet_pil_list = \
-            DetailerForEach.do_detail(image, segs, model, clip, vae, guide_size, guide_size_for, max_size, seed, steps, cfg,
+            DetailerForEach.do_detail(image, segs, model, clip, vae, guide_size, guide_size_for, max_size, seed, steps,
+                                      cfg,
                                       sampler_name, scheduler, positive, negative, denoise, feather, noise_mask,
                                       force_inpaint, wildcard, detailer_hook,
                                       refiner_ratio=refiner_ratio, refiner_model=refiner_model,
@@ -1076,10 +1131,10 @@ class SegsBitwiseAndMask:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                        "segs": ("SEGS",),
-                        "mask": ("MASK",),
-                    }
-                }
+            "segs": ("SEGS",),
+            "mask": ("MASK",),
+        }
+        }
 
     RETURN_TYPES = ("SEGS",)
     FUNCTION = "doit"
@@ -1087,17 +1142,17 @@ class SegsBitwiseAndMask:
     CATEGORY = "ImpactPack/Operation"
 
     def doit(self, segs, mask):
-        return (core.segs_bitwise_and_mask(segs, mask), )
-    
+        return (core.segs_bitwise_and_mask(segs, mask),)
+
 
 class SegsBitwiseAndMaskForEach:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                        "segs": ("SEGS",),
-                        "masks": ("MASK",),
-                    }
-                }
+            "segs": ("SEGS",),
+            "masks": ("MASK",),
+        }
+        }
 
     RETURN_TYPES = ("SEGS",)
     FUNCTION = "doit"
@@ -1105,7 +1160,7 @@ class SegsBitwiseAndMaskForEach:
     CATEGORY = "ImpactPack/Operation"
 
     def doit(self, segs, masks):
-        return (core.apply_mask_to_each_seg(segs, masks), )
+        return (core.apply_mask_to_each_seg(segs, masks),)
 
 
 class BitwiseAndMaskForEach:
@@ -1156,7 +1211,8 @@ class BitwiseAndMaskForEach:
                             cropped_mask1[j - crop_region1[1], i - crop_region1[0]] = 0
 
                 if overlapped:
-                    item = SEG(bseg.cropped_image, cropped_mask1, bseg.confidence, bseg.crop_region, bseg.bbox, bseg.label, None)
+                    item = SEG(bseg.cropped_image, cropped_mask1, bseg.confidence, bseg.crop_region, bseg.bbox,
+                               bseg.label, None)
                     result.append(item)
 
         return ((base_segs[0], result),)
@@ -1166,10 +1222,10 @@ class SubtractMaskForEach:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                        "base_segs": ("SEGS",),
-                        "mask_segs": ("SEGS",),
-                    }
-                }
+            "base_segs": ("SEGS",),
+            "mask_segs": ("SEGS",),
+        }
+        }
 
     RETURN_TYPES = ("SEGS",)
     FUNCTION = "doit"
@@ -1209,7 +1265,8 @@ class SubtractMaskForEach:
                             pass
 
                 if changed:
-                    item = SEG(bseg.cropped_image, cropped_mask1, bseg.confidence, bseg.crop_region, bseg.bbox, bseg.label, None)
+                    item = SEG(bseg.cropped_image, cropped_mask1, bseg.confidence, bseg.crop_region, bseg.bbox,
+                               bseg.label, None)
                     result.append(item)
                 else:
                     result.append(base_segs)
@@ -1221,20 +1278,20 @@ class MasksToMaskList:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                        "masks": ("MASK", ),
-                      }
-                }
+            "masks": ("MASK",),
+        }
+        }
 
-    RETURN_TYPES = ("MASK", )
-    OUTPUT_IS_LIST = (True, )
+    RETURN_TYPES = ("MASK",)
+    OUTPUT_IS_LIST = (True,)
     FUNCTION = "doit"
 
     CATEGORY = "ImpactPack/Operation"
 
     def doit(self, masks):
         if masks is None:
-            empty_mask = torch.zeros((64,64), dtype=torch.float32, device="cpu")
-            return ([empty_mask], )
+            empty_mask = torch.zeros((64, 64), dtype=torch.float32, device="cpu")
+            return ([empty_mask],)
 
         res = []
 
@@ -1243,20 +1300,20 @@ class MasksToMaskList:
 
         print(f"mask len: {len(res)}")
 
-        return (res, )
+        return (res,)
 
 
 class MaskListToMaskBatch:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                        "mask": ("MASK", ),
-                      }
-                }
+            "mask": ("MASK",),
+        }
+        }
 
     INPUT_IS_LIST = True
 
-    RETURN_TYPES = ("MASK", )
+    RETURN_TYPES = ("MASK",)
     FUNCTION = "doit"
 
     CATEGORY = "ImpactPack/Operation"
@@ -1275,7 +1332,8 @@ class MaskListToMaskBatch:
                 if len(mask2.shape) == 2:
                     mask2 = mask2.unsqueeze(0)
                 if mask1.shape[1:] != mask2.shape[1:]:
-                    mask2 = comfy.utils.common_upscale(mask2.movedim(-1, 1), mask1.shape[2], mask1.shape[1], "bilinear", "center").movedim(1, -1)
+                    mask2 = comfy.utils.common_upscale(mask2.movedim(-1, 1), mask1.shape[2], mask1.shape[1], "bilinear",
+                                                       "center").movedim(1, -1)
                 mask1 = torch.cat((mask1, mask2), dim=0)
             return (mask1,)
         else:
@@ -1287,13 +1345,13 @@ class ImageListToMaskBatch:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                        "images": ("IMAGE", ),
-                      }
-                }
+            "images": ("IMAGE",),
+        }
+        }
 
     INPUT_IS_LIST = True
 
-    RETURN_TYPES = ("IMAGE", )
+    RETURN_TYPES = ("IMAGE",)
     FUNCTION = "doit"
 
     CATEGORY = "ImpactPack/Operation"
@@ -1305,7 +1363,8 @@ class ImageListToMaskBatch:
             image1 = images[0]
             for image2 in images[1:]:
                 if image1.shape[1:] != image2.shape[1:]:
-                    image2 = comfy.utils.common_upscale(image2.movedim(-1, 1), image1.shape[2], image1.shape[1], "bilinear", "center").movedim(1, -1)
+                    image2 = comfy.utils.common_upscale(image2.movedim(-1, 1), image1.shape[2], image1.shape[1],
+                                                        "bilinear", "center").movedim(1, -1)
                 image1 = torch.cat((image1, image2), dim=0)
             return (image1,)
 
@@ -1314,10 +1373,10 @@ class ToBinaryMask:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                      "mask": ("MASK",),
-                      "threshold": ("INT", {"default": 20, "min": 1, "max": 255}),
-                    }
-                }
+            "mask": ("MASK",),
+            "threshold": ("INT", {"default": 20, "min": 1, "max": 255}),
+        }
+        }
 
     RETURN_TYPES = ("MASK",)
     FUNCTION = "doit"
@@ -1325,7 +1384,7 @@ class ToBinaryMask:
     CATEGORY = "ImpactPack/Operation"
 
     def doit(self, mask, threshold):
-        mask = to_binary_mask(mask, threshold/255.0)
+        mask = to_binary_mask(mask, threshold / 255.0)
         return (mask,)
 
 
@@ -1333,10 +1392,10 @@ class BitwiseAndMask:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                        "mask1": ("MASK",),
-                        "mask2": ("MASK",),
-                    }
-                }
+            "mask1": ("MASK",),
+            "mask2": ("MASK",),
+        }
+        }
 
     RETURN_TYPES = ("MASK",)
     FUNCTION = "doit"
@@ -1352,11 +1411,11 @@ class SubtractMask:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                        "mask1": ("MASK", ),
-                        "mask2": ("MASK", ),
-                      }
-                }
-    
+            "mask1": ("MASK",),
+            "mask2": ("MASK",),
+        }
+        }
+
     RETURN_TYPES = ("MASK",)
     FUNCTION = "doit"
 
@@ -1423,23 +1482,23 @@ def get_file_item(base_type, path):
     filename = os.path.basename(path)
 
     return {
-            "filename": filename,
-            "subfolder": subfolder,
-            "type": path_type
-           }
+        "filename": filename,
+        "subfolder": subfolder,
+        "type": path_type
+    }
 
 
 class PreviewBridge:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                    "images": ("IMAGE",),
-                    "image": ("STRING", {"default": ""}),
-                    },
-                "hidden": {"unique_id": "UNIQUE_ID"},
-                }
+            "images": ("IMAGE",),
+            "image": ("STRING", {"default": ""}),
+        },
+            "hidden": {"unique_id": "UNIQUE_ID"},
+        }
 
-    RETURN_TYPES = ("IMAGE", "MASK", )
+    RETURN_TYPES = ("IMAGE", "MASK",)
 
     FUNCTION = "doit"
 
@@ -1516,7 +1575,7 @@ class PreviewBridge:
 
         return {
             "ui": {"images": image},
-            "result": (pixels, mask, ),
+            "result": (pixels, mask,),
         }
 
 
@@ -1526,12 +1585,12 @@ class ImageReceiver:
         input_dir = folder_paths.get_input_directory()
         files = [f for f in os.listdir(input_dir) if os.path.isfile(os.path.join(input_dir, f))]
         return {"required": {
-                    "image": (sorted(files), ),
-                    "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
-                    "save_to_workflow": ("BOOLEAN", {"default": False}),
-                    "image_data": ("STRING", {"multiline": False}),
-                    },
-                }
+            "image": (sorted(files),),
+            "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
+            "save_to_workflow": ("BOOLEAN", {"default": False}),
+            "image_data": ("STRING", {"multiline": False}),
+        },
+        }
 
     FUNCTION = "doit"
 
@@ -1557,13 +1616,14 @@ class ImageReceiver:
             except Exception as e:
                 print(f"[ComfyUI-Impact-Pack] ImageReceiver - invalid 'image_data'")
                 mask = torch.zeros((64, 64), dtype=torch.float32, device="cpu")
-                return (empty_pil_tensor(64, 64), mask, )
+                return (empty_pil_tensor(64, 64), mask,)
         else:
             return nodes.LoadImage().load_image(image)
 
     @classmethod
     def VALIDATE_INPUTS(s, image, link_id, save_to_workflow, image_data):
-        if image != '#DATA' and not folder_paths.exists_annotated_filepath(image) or image.startswith("/") or ".." in image:
+        if image != '#DATA' and not folder_paths.exists_annotated_filepath(image) or image.startswith(
+                "/") or ".." in image:
             return "Invalid image file: {}".format(image)
 
         return True
@@ -1578,15 +1638,16 @@ class ImageReceiver:
 
 from server import PromptServer
 
+
 class ImageSender(nodes.PreviewImage):
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                    "images": ("IMAGE", ),
-                    "filename_prefix": ("STRING", {"default": "ImgSender"}),
-                    "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}), },
-                "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO"},
-                }
+            "images": ("IMAGE",),
+            "filename_prefix": ("STRING", {"default": "ImgSender"}),
+            "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}), },
+            "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO"},
+        }
 
     OUTPUT_NODE = True
 
@@ -1611,12 +1672,13 @@ class LatentReceiver:
             return x.endswith(".latent") or x.endswith(".latent.png")
 
         input_dir = folder_paths.get_input_directory()
-        files = [f for f in os.listdir(input_dir) if os.path.isfile(os.path.join(input_dir, f)) and check_file_extension(f)]
+        files = [f for f in os.listdir(input_dir) if
+                 os.path.isfile(os.path.join(input_dir, f)) and check_file_extension(f)]
         return {"required": {
-                    "latent": (sorted(files), ),
-                    "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
-                    },
-                }
+            "latent": (sorted(files),),
+            "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
+        },
+        }
 
     FUNCTION = "doit"
 
@@ -1656,7 +1718,7 @@ class LatentReceiver:
 
     def doit(self, **kwargs):
         if 'latent' not in kwargs:
-            return (torch.zeros([1, 4, 8, 8]), )
+            return (torch.zeros([1, 4, 8, 8]),)
 
         latent = kwargs['latent']
 
@@ -1678,9 +1740,9 @@ class LatentReceiver:
         preview = self.parse_filename(latent_name)
 
         return {
-                'ui': {"images": [preview]},
-                'result': (samples, )
-                }
+            'ui': {"images": [preview]},
+            'result': (samples,)
+        }
 
     @classmethod
     def IS_CHANGED(s, latent, link_id):
@@ -1705,13 +1767,13 @@ class LatentSender(nodes.SaveLatent):
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                             "samples": ("LATENT", ),
-                             "filename_prefix": ("STRING", {"default": "latents/LatentSender"}),
-                             "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
-                             "preview_method": (["Latent2RGB-SDXL", "Latent2RGB-SD15", "TAESDXL", "TAESD15"],)
-                             },
-                "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO"},
-                }
+            "samples": ("LATENT",),
+            "filename_prefix": ("STRING", {"default": "latents/LatentSender"}),
+            "link_id": ("INT", {"default": 0, "min": 0, "max": sys.maxsize, "step": 1}),
+            "preview_method": (["Latent2RGB-SDXL", "Latent2RGB-SD15", "TAESDXL", "TAESD15"],)
+        },
+            "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO"},
+        }
 
     OUTPUT_NODE = True
 
@@ -1768,11 +1830,11 @@ class LatentSender(nodes.SaveLatent):
 
         scale_factor = 1
         if max_size > upper_bound:
-            scale_factor = upper_bound/max_size
+            scale_factor = upper_bound / max_size
 
         # prevent too small preview
-        if min_size*scale_factor < lower_bound:
-            scale_factor = lower_bound/min_size
+        if min_size * scale_factor < lower_bound:
+            scale_factor = lower_bound / min_size
 
         w = int(image.size[0] * scale_factor)
         h = int(image.size[1] * scale_factor)
@@ -1801,8 +1863,10 @@ class LatentSender(nodes.SaveLatent):
 
         return new_image
 
-    def doit(self, samples, filename_prefix="latents/LatentSender", link_id=0, preview_method="Latent2RGB-SDXL", prompt=None, extra_pnginfo=None):
-        full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(filename_prefix, self.output_dir)
+    def doit(self, samples, filename_prefix="latents/LatentSender", link_id=0, preview_method="Latent2RGB-SDXL",
+             prompt=None, extra_pnginfo=None):
+        full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(
+            filename_prefix, self.output_dir)
 
         # load preview
         preview = LatentSender.prepare_preview(samples['samples'], preview_method)
@@ -1817,10 +1881,10 @@ class LatentSender(nodes.SaveLatent):
         LatentSender.save_to_file(tensor_bytes, prompt, extra_pnginfo, preview, fullpath)
 
         latent_path = {
-                    'filename': file,
-                    'subfolder': subfolder,
-                    'type': self.type
-                    }
+            'filename': file,
+            'subfolder': subfolder,
+            'type': self.type
+        }
 
         PromptServer.instance.send_sync("latent-send", {"link_id": link_id, "images": [latent_path]})
 
@@ -1831,22 +1895,22 @@ class ImageMaskSwitch:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                    "select": ("INT", {"default": 1, "min": 1, "max": 4, "step": 1}),
-                    "images1": ("IMAGE", ),
-                    },
-            
-                "optional": {
-                    "mask1_opt": ("MASK",),
-                    "images2_opt": ("IMAGE",),
-                    "mask2_opt": ("MASK",),
-                    "images3_opt": ("IMAGE",),
-                    "mask3_opt": ("MASK",),
-                    "images4_opt": ("IMAGE",),
-                    "mask4_opt": ("MASK",),
-                    },
-                }
+            "select": ("INT", {"default": 1, "min": 1, "max": 4, "step": 1}),
+            "images1": ("IMAGE",),
+        },
 
-    RETURN_TYPES = ("IMAGE", "MASK", )
+            "optional": {
+                "mask1_opt": ("MASK",),
+                "images2_opt": ("IMAGE",),
+                "mask2_opt": ("MASK",),
+                "images3_opt": ("IMAGE",),
+                "mask3_opt": ("MASK",),
+                "images4_opt": ("IMAGE",),
+                "mask4_opt": ("MASK",),
+            },
+        }
+
+    RETURN_TYPES = ("IMAGE", "MASK",)
 
     OUTPUT_NODE = True
 
@@ -1854,7 +1918,8 @@ class ImageMaskSwitch:
 
     CATEGORY = "ImpactPack/Util"
 
-    def doit(self, select, images1, mask1_opt=None, images2_opt=None, mask2_opt=None, images3_opt=None, mask3_opt=None, images4_opt=None, mask4_opt=None):
+    def doit(self, select, images1, mask1_opt=None, images2_opt=None, mask2_opt=None, images3_opt=None, mask3_opt=None,
+             images4_opt=None, mask4_opt=None):
         if select == 1:
             return images1, mask1_opt,
         elif select == 2:
@@ -1869,12 +1934,12 @@ class LatentSwitch:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                    "select": ("INT", {"default": 1, "min": 1, "max": 99999, "step": 1}),
-                    "latent1": ("LATENT",),
-                    },
-                }
+            "select": ("INT", {"default": 1, "min": 1, "max": 99999, "step": 1}),
+            "latent1": ("LATENT",),
+        },
+        }
 
-    RETURN_TYPES = ("LATENT", )
+    RETURN_TYPES = ("LATENT",)
 
     OUTPUT_NODE = True
 
@@ -1898,7 +1963,7 @@ class SaveConditioning:
 
     @classmethod
     def INPUT_TYPES(s):
-        return {"required": {"conditioning": ("CONDITIONING", ),
+        return {"required": {"conditioning": ("CONDITIONING",),
                              "filename_prefix": ("STRING", {"default": "conditioning/ComfyUI"}),
                              },
                 "hidden": {"prompt": "PROMPT", "extra_pnginfo": "EXTRA_PNGINFO"},
@@ -1918,7 +1983,8 @@ class SaveConditioning:
             prompt_info = json.dumps(prompt)
 
         for tensor_data, meta_data in conditioning:
-            full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(filename_prefix, self.output_dir)
+            full_output_folder, filename, counter, subfolder, filename_prefix = folder_paths.get_save_image_path(
+                filename_prefix, self.output_dir)
 
             metadata = {"prompt": prompt_info}
             if extra_pnginfo is not None:
@@ -1943,18 +2009,19 @@ class LoadConditioning:
     @classmethod
     def INPUT_TYPES(s):
         input_dir = folder_paths.get_input_directory()
-        files = [f for f in os.listdir(input_dir) if os.path.isfile(os.path.join(input_dir, f)) and f.endswith(".conditioning")]
+        files = [f for f in os.listdir(input_dir) if
+                 os.path.isfile(os.path.join(input_dir, f)) and f.endswith(".conditioning")]
         return {"required": {"conditioning": [sorted(files), ]}, }
 
     CATEGORY = "_for_testing"
 
-    RETURN_TYPES = ("CONDITIONING", )
+    RETURN_TYPES = ("CONDITIONING",)
     FUNCTION = "load"
 
     def load(self, conditioning):
         conditioning_path = folder_paths.get_annotated_filepath(conditioning)
         data = safetensors.torch.load_file(conditioning_path, device="cpu")
-        return ([[data['conditioning'], {}]], )
+        return ([[data['conditioning'], {}]],)
 
     @classmethod
     def IS_CHANGED(s, conditioning):
@@ -1975,36 +2042,37 @@ class ImpactWildcardProcessor:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                        "wildcard_text": ("STRING", {"multiline": True, "dynamicPrompts": False}),
-                        "populated_text": ("STRING", {"multiline": True, "dynamicPrompts": False}),
-                        "mode": ("BOOLEAN", {"default": True, "label_on": "Populate", "label_off": "Fixed"}),
-                        "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
-                    },
-                }
+            "wildcard_text": ("STRING", {"multiline": True, "dynamicPrompts": False}),
+            "populated_text": ("STRING", {"multiline": True, "dynamicPrompts": False}),
+            "mode": ("BOOLEAN", {"default": True, "label_on": "Populate", "label_off": "Fixed"}),
+            "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
+        },
+        }
 
     CATEGORY = "ImpactPack/Prompt"
 
-    RETURN_TYPES = ("STRING", )
+    RETURN_TYPES = ("STRING",)
     FUNCTION = "doit"
 
     def doit(self, wildcard_text, populated_text, mode, seed):
-        return (populated_text, )
+        return (populated_text,)
 
 
 class ImpactWildcardEncode:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                        "model": ("MODEL",),
-                        "clip": ("CLIP",),
-                        "wildcard_text": ("STRING", {"multiline": True, "dynamicPrompts": False}),
-                        "populated_text": ("STRING", {"multiline": True, "dynamicPrompts": False}),
-                        "mode": ("BOOLEAN", {"default": True, "label_on": "Populate", "label_off": "Fixed"}),
-                        "Select to add LoRA": (["Select the LoRA to add to the text"] + folder_paths.get_filename_list("loras"), ),
-                        "Select to add Wildcard": (["Select the Wildcard to add to the text"] + impact.wildcards.get_wildcard_list(), ),
-                        "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
-                    },
-                }
+            "model": ("MODEL",),
+            "clip": ("CLIP",),
+            "wildcard_text": ("STRING", {"multiline": True, "dynamicPrompts": False}),
+            "populated_text": ("STRING", {"multiline": True, "dynamicPrompts": False}),
+            "mode": ("BOOLEAN", {"default": True, "label_on": "Populate", "label_off": "Fixed"}),
+            "Select to add LoRA": (["Select the LoRA to add to the text"] + folder_paths.get_filename_list("loras"),),
+            "Select to add Wildcard": (
+                ["Select the Wildcard to add to the text"] + impact.wildcards.get_wildcard_list(),),
+            "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
+        },
+        }
 
     CATEGORY = "ImpactPack/Prompt"
 
@@ -2030,17 +2098,17 @@ class ReencodeLatent:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                        "samples": ("LATENT", ),
-                        "tile_mode": (["None", "Both", "Decode(input) only", "Encode(output) only"],),
-                        "input_vae": ("VAE", ),
-                        "output_vae": ("VAE", ),
-                        "tile_size": ("INT", {"default": 512, "min": 320, "max": 4096, "step": 64}),
-                    },
-                }
+            "samples": ("LATENT",),
+            "tile_mode": (["None", "Both", "Decode(input) only", "Encode(output) only"],),
+            "input_vae": ("VAE",),
+            "output_vae": ("VAE",),
+            "tile_size": ("INT", {"default": 512, "min": 320, "max": 4096, "step": 64}),
+        },
+        }
 
     CATEGORY = "ImpactPack/Util"
 
-    RETURN_TYPES = ("LATENT", )
+    RETURN_TYPES = ("LATENT",)
     FUNCTION = "doit"
 
     def doit(self, samples, tile_mode, input_vae, output_vae, tile_size=512):
@@ -2059,16 +2127,16 @@ class ReencodeLatentPipe:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                        "samples": ("LATENT", ),
-                        "tile_mode": (["None", "Both", "Decode(input) only", "Encode(output) only"],),
-                        "input_basic_pipe": ("BASIC_PIPE", ),
-                        "output_basic_pipe": ("BASIC_PIPE", ),
-                    },
-                }
+            "samples": ("LATENT",),
+            "tile_mode": (["None", "Both", "Decode(input) only", "Encode(output) only"],),
+            "input_basic_pipe": ("BASIC_PIPE",),
+            "output_basic_pipe": ("BASIC_PIPE",),
+        },
+        }
 
     CATEGORY = "ImpactPack/Util"
 
-    RETURN_TYPES = ("LATENT", )
+    RETURN_TYPES = ("LATENT",)
     FUNCTION = "doit"
 
     def doit(self, samples, tile_mode, input_basic_pipe, output_basic_pipe):
@@ -2090,7 +2158,7 @@ class ImageBatchToImageList:
 
     def doit(self, image):
         images = [image[i:i + 1, ...] for i in range(image.shape[0])]
-        return (images, )
+        return (images,)
 
 
 class MakeImageList:
@@ -2110,7 +2178,7 @@ class MakeImageList:
         for k, v in kwargs.items():
             images.append(v)
 
-        return (images, )
+        return (images,)
 
 
 class MakeImageBatch:
@@ -2133,7 +2201,8 @@ class MakeImageBatch:
         else:
             for image2 in images:
                 if image1.shape[1:] != image2.shape[1:]:
-                    image2 = comfy.utils.common_upscale(image2.movedim(-1, 1), image1.shape[2], image1.shape[1], "bilinear", "center").movedim(1, -1)
+                    image2 = comfy.utils.common_upscale(image2.movedim(-1, 1), image1.shape[2], image1.shape[1],
+                                                        "bilinear", "center").movedim(1, -1)
                 image1 = torch.cat((image1, image2), dim=0)
             return (image1,)
 
@@ -2182,4 +2251,4 @@ class StringSelector:
             else:
                 selected = lines[select % len(lines)]
 
-        return (selected, )
+        return (selected,)
